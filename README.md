@@ -95,7 +95,7 @@ You can also just execute single steps of the pipeline (`process_environment`, `
 Thanks to Kenny for creating [1-Bit Pack](https://kenney.nl/assets/1-bit-pack) which was used for most of the 12 problems in the benchmark. Even the ones that didn't use it were inspired by the color palette used in that pack.
 
 ## Contributing
-Bug reports and pull requests are welcome on GitHub at [https://github.com/amidos2006/pcg_benchmark/](https://github.com/amidos2006/pcg_benchmark/).
+Bug reports and pull requests are welcome on GitHub at [https://github.com/amidos2006/benchmark_experiments](https://github.com/amidos2006/benchmark_experiments).
 
 ## License
 This code is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
