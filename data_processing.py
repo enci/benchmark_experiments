@@ -2,6 +2,7 @@ import json
 import os
 from typing import List, Optional
 
+from itertools import cycle
 import fire
 import matplotlib.pyplot as plt
 import matplotlib
@@ -10,6 +11,16 @@ import pandas as pd
 import seaborn as sns
 from scipy import stats
 from tqdm import tqdm
+
+
+plt.rcParams["font.family"] = "Times New Roman"
+plt.rcParams["font.size"] = 56
+plt.rcParams["axes.titlesize"] = 56
+plt.rcParams["axes.labelsize"] = 52
+plt.rcParams["xtick.labelsize"] = 44
+plt.rcParams["ytick.labelsize"] = 44
+plt.rcParams["legend.fontsize"] = 48
+plt.rcParams["figure.titlesize"] = 60
 
 
 # Define a function to compute credible intervals
@@ -41,6 +52,7 @@ def compute_fitness(quality_value, controllability_value, diversity_value,
 			result += diversity_value
 		return result / 3.0
 
+		
 def process_environment(env_path: str) -> str:
 	results = []
 	
@@ -242,10 +254,7 @@ def create_line_plots(csv_file, output_dir):
 	
 	# Ensure the output directory exists
 	os.makedirs(output_dir, exist_ok=True)
-	
-	# Change matplotlib font properties
-	matplotlib.rcParams.update({'font.size': 40})
-	
+		
 	# Iterate over each environment type to generate plots for all environments
 	for env_name, env_group in df.groupby('env_name'):
 		
@@ -257,29 +266,26 @@ def create_line_plots(csv_file, output_dir):
 				x='iter_n',
 				y=f'mean_{prop}',
 				hue='algorithm',
-				hue_order=['random', 'ga', 'es'],  # Custom sorting of the algorithms
+				hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms
 				#style='fitness_type',
-				markers=False,
+				markers='fitness_type',
 				dashes=True,
-				errorbar=None
+				errorbar=None,
+				linewidth=5
 			)
 			#for key, grp in env_group.groupby(['fitness_type', 'algorithm']):
 			for key, grp in env_group.groupby(['algorithm']):
-				color = lineplot.get_lines()[['random', 'ga', 'es'].index(key[0])].get_color()
+				color = lineplot.get_lines()[['random', 'es', 'ga'].index(key[0])].get_color()
 				plt.fill_between(
 					grp['iter_n'],
 					grp[f'lower_ci_{prop}'],
 					grp[f'upper_ci_{prop}'],
 					alpha=0.2,
 					color=color,
-					label=None#f'{key[0]} - {key[1]} {prop.title()} CI'
+					label=None
 				)
 				
-			# Plot customization
-			#plt.title(f'{env_name} - {prop.title()} over Iterations')
-			#plt.xlabel('Iteration')
-			#plt.ylabel(f'Mean {prop.title()}')
-						
+			# Plot customization						
 			plt.xticks([0, 50, 100, 150, 200])
 			plt.yticks([0., 0.25, 0.5, 0.75, 1.0])
 			
@@ -287,14 +293,14 @@ def create_line_plots(csv_file, output_dir):
 			plt.ylabel(f'Mean {prop.title()}' if env_name in ['arcade-v0', 'elimination-v0', 'smb-v0'] else '')
 			plt.legend([],[],frameon=False)
 			plt.ylim(0, 1.1)
+			plt.xlim(0, 200)
 
 			plt.tight_layout()
 			
 			# Save the plot
-			plot_filename = f"{env_name}_{prop}_statistics_lineplot.png"
+			plot_filename = f"{env_name}_{prop}_statistics_lineplot.pdf"
 			plt.savefig(os.path.join(output_dir, plot_filename))
-			
-			
+						
 			# Custom legend
 			handles, labels = plt.gca().get_legend_handles_labels()
 			for i, label in enumerate(labels):
@@ -313,7 +319,7 @@ def create_line_plots(csv_file, output_dir):
 			fig.patch.set_alpha(0.0)
 			fig.canvas.draw()
 			bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-			fig.savefig(os.path.join(output_dir, 'legend.png'), bbox_inches=bbox, transparent=True)
+			fig.savefig(os.path.join(output_dir, 'legend.pdf'), bbox_inches=bbox, transparent=True)
 			
 			plt.close()
 			
@@ -363,8 +369,8 @@ def render_elites(csv_file, output_dir):
 						frames[0].save(os.path.join(output_dir, f'{env_name}_{fitness_type}_{algorithm}_n{i}{str_fitness}{run_n}_elite.gif'), append_images=frames[1:], save_all=True, duration=100, loop=0)
 					
 					if i == 2: break
-
-						
+	
+	
 def to_latex_table(csv_file,
 				   metric,
 				   output_dir):
@@ -424,11 +430,11 @@ def to_latex_table(csv_file,
 			if mean == max_mean_value:
 				row += '& \\textbf{' + f'{mean:.2f}' + '}'
 				if not np.isnan(ci_diff):
-					row += '$\\mathbf{\\pm}$\\textbf{' + f'{(ci_diff - mean):2f}' + '}'
+					row += '$\\mathbf{\\pm}$\\textbf{' + f'{(ci_diff - mean):.2f}' + '}'
 			else:
 				row += f'& {mean:.2f}'
 				if not np.isnan(ci_diff):
-					row += f'$\\pm${(ci_diff - mean):2f}'
+					row += f'$\\pm${(ci_diff - mean):.2f}'
 
 		# Close the row
 		row += r' \\\hline'
@@ -451,103 +457,141 @@ def to_latex_table(csv_file,
 def compute_runs_diversity(csv_file,
 						   output_dir):
 	import pcg_benchmark
+	
+	plt.rcParams["font.family"] = "Times New Roman"
+	plt.rcParams["font.size"] = 46
+	plt.rcParams["axes.titlesize"] = 46
+	plt.rcParams["axes.labelsize"] = 42
+	plt.rcParams["xtick.labelsize"] = 38
+	plt.rcParams["ytick.labelsize"] = 38
+	plt.rcParams["legend.fontsize"] = 38
+	plt.rcParams["figure.titlesize"] = 50
+	
 	df = pd.read_csv(csv_file)
 
 	folder_path = os.path.join(csv_file, '..')  # This is a hack, I know, but it works
 	
-	matplotlib.rcParams.update({'font.size': 30})
-	
-	plot_data = pd.DataFrame(columns=[
-		'fitness_type', 'env_name', 'algorithm', 'elites_diversity', 'mean_success'
-	])
-	
-	for fitness_type in tqdm(df['fitness_type'].unique(), desc='Fitness type', leave=False, dynamic_ncols=True):
-		for env_name in tqdm(df['env_name'].unique(), desc='Environment', leave=False, dynamic_ncols=True):
-
-			env = pcg_benchmark.make(env_name)
-
-			for algorithm in tqdm(df['algorithm'].unique(), desc='Algorithm', leave=False, dynamic_ncols=True):
-				elites = []
-				controls = []
-				n_success_quality = []
-				for run_n in tqdm(df['run_n'].unique(), desc='Run number', leave=False, dynamic_ncols=True):
-					run_data = df.loc[
-						(df['env_name'] == env_name) &
-						(df['fitness_type'] == fitness_type) &
-						(df['algorithm'] == algorithm) &
-						(df['run_n'] == run_n)]
-					last_iter = max(run_data['iter_n'])
-					elite_fname = run_data.loc[run_data['iter_n'] == last_iter]['elite'].values[0]
-					with open(f'{folder_path}/{env_name}/{fitness_type}/{algorithm}/{run_n}/iter_{last_iter}/{elite_fname}', 'r') as f:
-						elite = json.load(f)
-					elites.append(elite['content'])
-					controls.append(elite['control'])
-					n_success_quality = run_data.loc[run_data['iter_n'] == last_iter]['success_quality'].values[0]
-				diversity = env.diversity(elites)[0] * 100
-				controlability = env.controlability(elites, controls)[0] * 100
-				mean_success = np.mean(n_success_quality)
-				plot_data = plot_data._append({'fitness_type': fitness_type, 'env_name': env_name, 'algorithm': algorithm, 'elites_diversity': diversity, 'elites_controlability': controlability, 'mean_success': mean_success}, ignore_index=True)
+	if not os.path.exists(os.path.join(folder_path, 'diversity_data.csv')):
+		plot_data = pd.DataFrame(columns=[
+			'fitness_type', 'env_name', 'algorithm', 'elites_diversity', 'mean_success'
+		])
 		
+		for fitness_type in tqdm(df['fitness_type'].unique(), desc='Fitness type', leave=False, dynamic_ncols=True):
+			for env_name in tqdm(df['env_name'].unique(), desc='Environment', leave=False, dynamic_ncols=True):
+
+				env = pcg_benchmark.make(env_name)
+
+				for algorithm in tqdm(df['algorithm'].unique(), desc='Algorithm', leave=False, dynamic_ncols=True):
+					elites = []
+					controls = []
+					for run_n in tqdm(df['run_n'].unique(), desc='Run number', leave=False, dynamic_ncols=True):
+						run_data = df.loc[
+							(df['env_name'] == env_name) &
+							(df['fitness_type'] == fitness_type) &
+							(df['algorithm'] == algorithm) &
+							(df['run_n'] == run_n)]
+						last_iter = max(run_data['iter_n'])
+						elite_fname = run_data.loc[run_data['iter_n'] == last_iter]['elite'].values[0]
+						with open(f'{folder_path}/{env_name}/{fitness_type}/{algorithm}/{run_n}/iter_{last_iter}/{elite_fname}', 'r') as f:
+							elite = json.load(f)
+						elites.append(elite['content'])
+						controls.append(elite['control'])
+					diversity = env.diversity(elites)[0] * 100
+					controlability = env.controlability(elites, controls)[0] * 100
+					mean_success = env.quality(elites)[0] * 100
+					plot_data = plot_data._append({'fitness_type': fitness_type, 'env_name': env_name, 'algorithm': algorithm, 'elites_diversity': diversity, 'elites_controlability': controlability, 'mean_success': mean_success}, ignore_index=True)
+		plot_data.to_csv(os.path.join(folder_path, 'diversity_data.csv'), index=False)	
+	else:
+		plot_data = pd.read_csv(os.path.join(folder_path, 'diversity_data.csv'))
 	fitness_types = plot_data['fitness_type'].unique()
-
+	
+	env_names = [
+		"Arcade Rules", "Binary", "Building", "Dangerous Dave", "Elimination", 
+		"The Binding of Isaac", "Lode Runner", "Mini Dungeons", "Super Mario Bros", 
+		"Sokoban", "Talakat", "Zelda"
+	]
+	hatches = cycle(['-', '+', 'x'])
+	
 	for fitness in fitness_types:
 		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
 
 		plt.figure(figsize=(12, 8))
-		sns.barplot(x='env_name', y='elites_diversity',
-					hue='algorithm', hue_order=['random', 'ga', 'es'],  # Custom sorting of the algorithms,
-					data=fitness_data)
+		ax = sns.barplot(x='env_name', y='elites_diversity',
+					hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
+					data=fitness_data,
+					linewidth=3, edgecolor='black')
+		
+		for i, patch in enumerate(ax.artists):
+			hatch = next(hatches)
+			patch.set_hatch(hatch)
 		
 		plt.title('')
-		plt.xlabel('Problems')
-		plt.xticks(rotation=45, ha='right')
-		plt.ylabel('% Unique Individuals')
+		plt.xlabel('')
+		plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
+		plt.ylabel('% Unique Individuals' if fitness == fitness_types[0] else '')
 		plt.yticks([0, 25, 50, 75, 100])
+		
+		ax.yaxis.set_label_coords(-0.2, 0.2)
 		
 		plt.legend([],[],frameon=False)
 		plt.tight_layout()
 		
-		plot_filename = f"diversity_{fitness}.png"
+		plot_filename = f"diversity_{fitness}.pdf"
 		plt.savefig(os.path.join(output_dir, plot_filename))
 		
 	for fitness in fitness_types:
 		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
 
 		plt.figure(figsize=(12, 8))
-		sns.barplot(x='env_name', y='elites_controlability',
-					hue='algorithm', hue_order=['random', 'ga', 'es'],  # Custom sorting of the algorithms,
-					data=fitness_data)
+		ax = sns.barplot(x='env_name', y='elites_controlability',
+					hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
+					data=fitness_data,
+					linewidth=3, edgecolor='black')
 		
+		for i, patch in enumerate(ax.artists):
+			hatch = next(hatches)
+			patch.set_hatch(hatch)
+			
 		plt.title('')
-		plt.xlabel('Problems')
-		plt.xticks(rotation=45, ha='right')
-		plt.ylabel('% Unique Individuals')
+		plt.xlabel('')
+		plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
+		plt.ylabel('% Controlled Individuals' if fitness == fitness_types[0] else '')
+		
+		ax.yaxis.set_label_coords(-0.2, 0.2)
+		
 		plt.yticks([0, 25, 50, 75, 100])
 		
 		plt.legend([],[],frameon=False)
 		plt.tight_layout()
 		
-		plot_filename = f"controlability_{fitness}.png"
+		plot_filename = f"controlability_{fitness}.pdf"
 		plt.savefig(os.path.join(output_dir, plot_filename))
 
 	for fitness in fitness_types:
 		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
 
 		plt.figure(figsize=(12, 8))
-		sns.barplot(x='env_name', y='mean_success',
-					hue='algorithm', hue_order=['random', 'ga', 'es'],  # Custom sorting of the algorithms,
-					data=fitness_data)
+		ax = sns.barplot(x='env_name', y='mean_success',
+					hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
+					data=fitness_data,
+					linewidth=3, edgecolor='black')
+		
+		for i, patch in enumerate(ax.artists):
+			hatch = next(hatches)
+			patch.set_hatch(hatch)
 		
 		plt.title('')
-		plt.xlabel('Problems')
-		plt.xticks(rotation=45, ha='right')
-		plt.ylabel('Mean % Success')
+		plt.xlabel('')
+		plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
+		plt.ylabel('% Successful Individuals' if fitness == fitness_types[0] else '')
 		plt.yticks([0, 25, 50, 75, 100])
+		
+		ax.yaxis.set_label_coords(-0.2, 0.2)
 		
 		plt.legend([],[],frameon=False)
 		plt.tight_layout()
 		
-		plot_filename = f"success_{fitness}.png"
+		plot_filename = f"success_{fitness}.pdf"
 		plt.savefig(os.path.join(output_dir, plot_filename))
 		
 	
@@ -563,6 +607,7 @@ class DataCruncher:
 		self.plot(aggr_csv, output_dir)
 		self.render_elites(raw_csv, renders_dir)
 		self.to_latex(aggr_csv, latex_dir)
+		self.compute_runs_diversity(raw_csv, output_dir)
 	
 	def process_environment(self, env_path):
 		process_environment(env_path)
@@ -581,7 +626,7 @@ class DataCruncher:
 	
 	def render_elites(self, csv_file, renders_dir):
 		render_elites(csv_file, renders_dir)
-	
+		
 	def to_latex(self, csv_file, latex_dir):
 		for metric in ['quality', 'controlability', 'diversity']:
 			to_latex_table(csv_file, metric, latex_dir)
