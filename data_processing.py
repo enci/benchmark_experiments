@@ -267,8 +267,10 @@ def create_line_plots(csv_file, output_dir):
 				y=f'mean_{prop}',
 				hue='algorithm',
 				hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms
-				#style='fitness_type',
-				markers='fitness_type',
+				style='algorithm',
+				markers=True,
+				markevery=range(0, 200, 20),
+				ms=20,
 				dashes=True,
 				errorbar=None,
 				linewidth=5
@@ -310,7 +312,8 @@ def create_line_plots(csv_file, output_dir):
 				if label == 'algorithm':
 					labels[i] = 'Algorithm'
 					handles[i].set_linewidth(0.0)
-			unique_labels = dict(zip(labels, handles))  # Remove duplicate labels
+				labels[i] = label.title() if label == 'random' else label.upper()
+			unique_labels = dict(zip(labels, handles))  # Remove duplicate label
 			legend = plt.legend(unique_labels.values(), unique_labels.keys(), title='',
 								ncol=len(unique_labels), loc='lower left')
 			for legend_obj in legend.legend_handles:
@@ -319,7 +322,7 @@ def create_line_plots(csv_file, output_dir):
 			fig.patch.set_alpha(0.0)
 			fig.canvas.draw()
 			bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
-			fig.savefig(os.path.join(output_dir, 'legend.pdf'), bbox_inches=bbox, transparent=True)
+			fig.savefig(os.path.join(output_dir, 'legend_lineplots.pdf'), bbox_inches=bbox, transparent=True)
 			
 			plt.close()
 			
@@ -510,90 +513,75 @@ def compute_runs_diversity(csv_file,
 		"The Binding of Isaac", "Lode Runner", "Mini Dungeons", "Super Mario Bros", 
 		"Sokoban", "Talakat", "Zelda"
 	]
-	hatches = cycle(['-', '+', 'x'])
+	hatches = ['o', '/', '\\']
 	
 	for fitness in fitness_types:
 		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
-
-		plt.figure(figsize=(12, 8))
-		ax = sns.barplot(x='env_name', y='elites_diversity',
-					hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
-					data=fitness_data,
-					linewidth=3, edgecolor='black')
 		
-		for i, patch in enumerate(ax.artists):
-			hatch = next(hatches)
-			patch.set_hatch(hatch)
-		
-		plt.title('')
-		plt.xlabel('')
-		plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
-		plt.ylabel('% Unique Individuals' if fitness == fitness_types[0] else '')
-		plt.yticks([0, 25, 50, 75, 100])
-		
-		ax.yaxis.set_label_coords(-0.2, 0.2)
-		
-		plt.legend([],[],frameon=False)
-		plt.tight_layout()
-		
-		plot_filename = f"diversity_{fitness}.pdf"
-		plt.savefig(os.path.join(output_dir, plot_filename))
-		
-	for fitness in fitness_types:
-		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
-
-		plt.figure(figsize=(12, 8))
-		ax = sns.barplot(x='env_name', y='elites_controlability',
-					hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
-					data=fitness_data,
-					linewidth=3, edgecolor='black')
-		
-		for i, patch in enumerate(ax.artists):
-			hatch = next(hatches)
-			patch.set_hatch(hatch)
+		for y_type, y_label, fname in zip(['elites_diversity', 'elites_controlability', 'mean_success'],
+										  ['% Unique Individuals', '% Controlled Individuals', '% Successful Individuals'],
+										  ['diversity', 'controlability', 'success']):
+			plt.figure(figsize=(12, 8))
 			
-		plt.title('')
-		plt.xlabel('')
-		plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
-		plt.ylabel('% Controlled Individuals' if fitness == fitness_types[0] else '')
-		
-		ax.yaxis.set_label_coords(-0.2, 0.2)
-		
-		plt.yticks([0, 25, 50, 75, 100])
-		
-		plt.legend([],[],frameon=False)
-		plt.tight_layout()
-		
-		plot_filename = f"controlability_{fitness}.pdf"
-		plt.savefig(os.path.join(output_dir, plot_filename))
+			
+			ax = sns.barplot(x='env_name', y=y_type,
+						hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
+						data=fitness_data,
+						linewidth=3, edgecolor='black',
+						gap=2.0)
+			
+			# Add hatch to patches
+			# Last 3 patches are the bars for the legend, so they are dealt with later
+			# Patches are ordered by hue, then by x
+			# ... because of course they are
+			for i, patch in enumerate(ax.patches[:-3]):
+				patch.set_hatch(hatches[i // len(env_names)])
+			# Add hatch to legend
+			for i, patch in enumerate(ax.patches[-3:]):
+				patch.set_hatch(hatches[i])
+			
+			plt.title('')
+			plt.xlabel('')
+			plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
+			plt.ylabel(y_label if fitness == fitness_types[0] else '')
+			plt.yticks([0, 25, 50, 75, 100])
+			
+			ax.yaxis.set_label_coords(-0.2, 0.2)
 
-	for fitness in fitness_types:
-		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
-
-		plt.figure(figsize=(12, 8))
-		ax = sns.barplot(x='env_name', y='mean_success',
-					hue='algorithm', hue_order=['random', 'es', 'ga'],  # Custom sorting of the algorithms,
-					data=fitness_data,
-					linewidth=3, edgecolor='black')
-		
-		for i, patch in enumerate(ax.artists):
-			hatch = next(hatches)
-			patch.set_hatch(hatch)
-		
-		plt.title('')
-		plt.xlabel('')
-		plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
-		plt.ylabel('% Successful Individuals' if fitness == fitness_types[0] else '')
-		plt.yticks([0, 25, 50, 75, 100])
-		
-		ax.yaxis.set_label_coords(-0.2, 0.2)
-		
-		plt.legend([],[],frameon=False)
-		plt.tight_layout()
-		
-		plot_filename = f"success_{fitness}.pdf"
-		plt.savefig(os.path.join(output_dir, plot_filename))
-		
+			# Add vertical line between each environment
+			for i in range(len(env_names)):
+				plt.axvline(0.5 + 1.0 * i, 0, 1, linestyle='--', linewidth=2, color='black')
+			
+			plt.legend([],[], frameon=False)
+			plt.tight_layout()
+			
+			plot_filename = f"{fname}_{fitness}.pdf"
+			plt.savefig(os.path.join(output_dir, plot_filename))
+				
+			# Custom legend
+			handles, labels = plt.gca().get_legend_handles_labels()
+			for i, label in enumerate(labels):
+				if label == 'fitness_type':
+					labels[i] = 'Fitness function'
+					handles[i].set_linewidth(0.0)
+				if label == 'algorithm':
+					labels[i] = 'Algorithm'
+					handles[i].set_linewidth(0.0)
+				labels[i] = label.title() if label == 'random' else label.upper()
+			unique_labels = dict(zip(labels, handles))  # Remove duplicate label
+			plt.close()
+			legend = plt.legend(unique_labels.values(), unique_labels.keys(), title='',
+								ncol=len(unique_labels), loc='lower left')
+			for legend_obj in legend.legend_handles:
+				legend_obj.set_linewidth(3)
+			fig = legend.figure
+			fig.patch.set_alpha(0.0)
+			fig.canvas.draw()
+			bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+			fig.savefig(os.path.join(output_dir, f'legend_barplots_{fname}.pdf'), bbox_inches=bbox, transparent=True)
+			
+			plt.close()
+	
 	
 class DataCruncher:
 	def run_pipeline(self,
@@ -631,7 +619,7 @@ class DataCruncher:
 		for metric in ['quality', 'controlability', 'diversity']:
 			to_latex_table(csv_file, metric, latex_dir)
 	
-	def compute_runs_diversity(self, csv_file, output_dir):
+	def barplot(self, csv_file, output_dir):
 		compute_runs_diversity(csv_file, output_dir)
 	
 
