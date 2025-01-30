@@ -499,9 +499,9 @@ def compute_runs_diversity(csv_file,
 							elite = json.load(f)
 						elites.append(elite['content'])
 						controls.append(elite['control'])
-					diversity = env.diversity(elites)[0] * 100
-					controlability = env.controlability(elites, controls)[0] * 100
-					mean_success = env.quality(elites)[0] * 100
+					diversity = env.diversity(elites)[0] * 10
+					controlability = env.controlability(elites, controls)[0] * 10
+					mean_success = env.quality(elites)[0] * 10
 					plot_data = plot_data._append({'fitness_type': fitness_type, 'env_name': env_name, 'algorithm': algorithm, 'elites_diversity': diversity, 'elites_controlability': controlability, 'mean_success': mean_success}, ignore_index=True)
 		plot_data.to_csv(os.path.join(folder_path, 'diversity_data.csv'), index=False)	
 	else:
@@ -519,7 +519,7 @@ def compute_runs_diversity(csv_file,
 		fitness_data = plot_data[plot_data['fitness_type'] == fitness]
 		
 		for y_type, y_label, fname in zip(['elites_diversity', 'elites_controlability', 'mean_success'],
-										  ['% Unique Individuals', '% Controlled Individuals', '% Successful Individuals'],
+										  ['# Unique Individuals', '# Controlled Individuals', '# Successful Individuals'],
 										  ['diversity', 'controlability', 'success']):
 			plt.figure(figsize=(12, 8))
 			
@@ -544,11 +544,10 @@ def compute_runs_diversity(csv_file,
 			plt.xlabel('')
 			plt.xticks(labels=env_names, ticks=range(len(env_names)), rotation=45, ha='right', rotation_mode='anchor')
 			plt.ylabel(y_label if fitness == fitness_types[0] else '')
-			plt.yticks([0, 25, 50, 75, 100])
+			plt.yticks([0, 2, 4, 6, 8, 10])
 			
 			ax.yaxis.set_label_coords(-0.2, 0.2)
-
-			# Add vertical line between each environment
+			
 			for i in range(len(env_names)):
 				plt.axvline(0.5 + 1.0 * i, 0, 1, linestyle='--', linewidth=2, color='black')
 			
