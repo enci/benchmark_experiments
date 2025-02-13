@@ -48,7 +48,7 @@ def compute_fitness(quality_value, controllability_value, diversity_value,
 		result = quality_value
 		if quality_value >= 1:
 			result += controllability_value
-		if controllability_value >= 1:
+		if quality_value >= 1 and controllability_value >= 1:
 			result += diversity_value
 		return result / 3.0
 
